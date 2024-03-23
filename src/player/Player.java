@@ -1,170 +1,239 @@
 package player;
+
 import character.BasicCharacter;
 import enemy.Enemy;
+import Game.exceptions.PlayerDeathException;
 import items.armor.Armor;
-import items.armor.helmets.HideHelmet;
 import items.weapon.Weapon;
-import items.weapon.blades.WoodenSword;
+import org.jetbrains.annotations.NotNull;
+import util.Interactive;
 import util.Randomized;
-import javax.swing.*;
 
-public class Player extends BasicCharacter {
-    protected int experience;
-    protected int level;
-    protected int damage;
-    protected int defense;
-    protected int gold;
-    protected Weapon weapon;
-    protected Armor armor;
+import java.io.Serializable;
+import java.util.ArrayList;
 
-    protected Inventory inventory;
+public class Player extends BasicCharacter implements Serializable {
 
-    public Player() {
-        super(JOptionPane.showInputDialog("Ingresa el nombre del jugador: "), 1200, 10);
-        this.experience = 0;
-        this.level = 1;
-        this.damage = 56;
-        this.defense = 20;
-        this.gold = 0;
-        this.weapon = null;
-        this.armor = null;
+    private int strength;
+    private int defense;
+    private int intelligence;
+    private int dexterity;
+    private int luck;
+    private int experience;
+    private int level;
+    private int gold;
+    private Weapon weapon;
+    private Armor armor;
+    private final Inventory inventory;
 
-        int capacity = 3;
-        inventory = new Inventory(capacity);
-        for(int i = 0; i < capacity; i++){
-            inventory.addItem(new WoodenSword("Wooden Sword", "A wooden sword", 300, 24, 34));
-        }
-        randomizeStats(10);
+    public Player(String name) {
+
+        super(name, 30, 10);
+        experience = 0;
+        level = 1;
+        gold = 0;
+        weapon = null;
+        armor = null;
+        randomizeStats(30);
+        inventory = new Inventory();
     }
 
-    public int attackDamage() {
-        return weapon != null ? damage + weapon.getAttack() : damage;
+    public void randomizeStats(int maxPoints) {
+
+        int stat = Randomized.randomizeNumber(1, 5);
+        while (maxPoints > 0) {
+            switch (stat) {
+                case 1 -> {
+                    if (strength < (level * 3)) strength++;
+                    else maxPoints++;
+                }
+                case 2 -> {
+                    if (defense < (level * 3)) defense++;
+                    else maxPoints++;
+                }
+                case 3 -> intelligence++;
+                case 4 -> dexterity++;
+                case 5 -> luck++;
+            }
+            maxPoints--;
+            stat = Randomized.randomizeNumber(1, 5);
+        }
+    }
+
+    public void equipWeapon(Weapon weapon) {
+
+        this.weapon = weapon;
+    }
+
+    public void equipArmor(Armor armor) {
+
+        this.armor = armor;
+    }
+
+    public void revive() {
+
+        hp = maxHp;
+        mp = maxMp;
+    }
+
+    public void attack(@NotNull Enemy enemy) throws PlayerDeathException {
+
+        if (!isDead()) {
+
+            Interactive.printDialog(String.format("%s ataca con %d puntos de daño!", getName(), getDamage()));
+            enemy.takeDamage(getDamage());
+            if (enemy.isDead()) getRewards(enemy);
+        } else {
+            throw new PlayerDeathException();
+        }
+    }
+
+    private void getRewards(@NotNull Enemy enemy) {
+
+        gainExperience(enemy.getExperience());
+        gainGold(enemy.getGold());
+        enemy.dropItem(this);
+    }
+
+    @Override
+    public void displayData() {
+
+        String message = String.format("""
+						Nombre: %s
+						Nivel: %d
+						Experiencia: %s
+						Salud: %s
+						Mana: %s
+						Fuerza: %s
+						Defensa: %s
+						Inteligencia: %d
+						Destreza: %d
+						Suerte: %d
+						Oro: %d
+						Arma: %s
+						Armadura: %s""",
+                getName(), level, getActualExperience(), getActualHp(), getActualMp(), getTotalAttack(),
+                getTotalDefense(), intelligence, dexterity, luck, gold, getWeaponName(), getArmorName());
+        Interactive.printDialog(message);
+    }
+
+    private String getActualHp() {
+
+        return String.format("%d/%d", getHp(), getMaxHp());
+    }
+
+    private String getActualMp() {
+
+        return String.format("%d/%d", getMp(), getMaxMp());
+    }
+
+    private String getActualExperience() {
+
+        return String.format("%d/%d", experience, level * 20);
+    }
+
+    private String getTotalAttack() {
+
+        return weapon != null ? String.format("%d (+ %d)", strength, weapon.getAtk()) : String.valueOf(strength);
+    }
+
+    private String getTotalDefense() {
+
+        return armor != null ? String.format("%d (+ %d)", defense, armor.getDef()) : String.valueOf(defense);
     }
 
     public void takeDamage(int damage) {
+
+        damage -= defense;
         if (armor != null) {
-            damage -= armor.getDefense();
+
+            damage -= armor.getDef();
             if (damage < 0) damage = 0;
         }
         super.takeDamage(damage);
         if (isDead()) printDeath();
     }
 
-    public void attack(Enemy enemy) {
-        System.out.println(getName() + " attacks " + enemy.getName() + " for " + attackDamage() + " damage!");
-        enemy.takeDamage(attackDamage());
-        if (enemy.isDead()) {
-            gainExperience(enemy.getExperience());
-            gainGold(enemy.getGold());
-        }
+    public void gainExperience(int experience) {
+
+        this.experience += experience;
+        printExperience(experience);
+        checkLevelUp();
     }
 
-    public void gainExperience(int experience) {
-        this.experience += experience;
+    private void checkLevelUp() {
+
+        if (this.experience >= level * 20) {
+
+            level++;
+            maxHp += 5;
+            maxMp += 3;
+            hp = maxHp;
+            mp = maxMp;
+            randomizeStats(5);
+            printLevelUp();
+        }
     }
 
     public void gainGold(int gold) {
+
         this.gold += gold;
+        printGold(gold);
     }
 
-    public void randomizeStats(int maxPoints) {
-        int stat = Randomized.randomizeNumber(1, 2);
-        int currentPoints = maxPoints;
-        while (currentPoints > 0) {
-            switch (stat) {
-                case 1 -> {
-                    if (damage < (level * 5)) damage++;
-                    else maxPoints++;
-                }
-                case 2 -> {
-                    if (defense < (level * 5)) defense++;
-                    else maxPoints++;
-                }
-            }
-            currentPoints--;
-            stat = Randomized.randomizeNumber(1, 2);
-        }
-    }
+    public void printLevelUp() {
 
-    public void printDeath(){
+        Interactive.printDialog(String.format("¡Felicidades! Has subido al nivel %d!", level));
         displayData();
-        JOptionPane.showMessageDialog(null, "A player has been slayed!");
     }
 
-    @Override
-    public void displayData() {
-        String output = String.format("Name: %s\n", name);
-        output += String.format("\tHP: %d/%d\n", hp, maxHp);
-        output += String.format("\tMP: %d/%d\n", mp, maxMp);
-        output += String.format("\tExperience: %d\n", experience);
-        output += String.format("\tLevel: %d\n", level);
-        output += String.format("\tStrength: %d\n", damage);
-        output += String.format("\tDefense: %d\n", defense);
-        JOptionPane.showMessageDialog(null, output);
+    public void printDeath() {
+
+        Interactive.printDialog("¡Has muerto!");
     }
 
-    public int getExperience() {
-        return experience;
+    public void printRun() {
+
+        Interactive.printDialog("¡Has huido!");
     }
 
-    public void setExperience(int experience) {
-        this.experience = experience;
+    public void printGold(int gold) {
+
+        Interactive.printDialog(String.format("Has ganado %d monedas de oro!", gold));
     }
 
-    public int getLevel() {
-        return level;
+    public void printExperience(int experience) {
+
+        Interactive.printDialog(String.format("Has ganado %d puntos de experiencia!", experience));
     }
 
-    public void setLevel(int level) {
-        this.level = level;
+    public void printHeal(int heal) {
+
+        Interactive.printDialog(String.format("Has recuperado %d puntos de salud!", heal));
+    }
+
+    public void printEquipWeapon(@NotNull Weapon weapon) {
+
+        Interactive.printDialog(String.format("Has equipado %s!", weapon.getName()));
+    }
+
+    public void printEquipArmor(@NotNull Armor armor) {
+
+        Interactive.printDialog(String.format("Has equipado %s!", armor.getName()));
+    }
+
+    public String getWeaponName() {
+
+        return weapon != null ? weapon.getName() : "None";
+    }
+
+    public String getArmorName() {
+
+        return armor != null ? armor.getName() : "None";
     }
 
     public int getDamage() {
-        return damage;
-    }
 
-    public void setDamage(int damage) {
-        this.damage = damage;
-    }
-
-    public int getDefense() {
-        return defense;
-    }
-
-    public void setDefense(int defense) {
-        this.defense = defense;
-    }
-
-
-    public int getGold() {
-        return gold;
-    }
-
-    public void setGold(int gold) {
-        this.gold = gold;
-    }
-
-    public Weapon getWeapon() {
-        return weapon;
-    }
-
-    public void setWeapon(Weapon weapon) {
-        this.weapon = weapon;
-    }
-
-    public Armor getArmor() {
-        return armor;
-    }
-
-    public void setArmor(Armor armor) {
-        this.armor = armor;
-    }
-
-    public Inventory getInventory() {
-        return inventory;
-    }
-
-    public void setInventory(Inventory inventory) {
-        this.inventory = inventory;
+        return weapon != null ? strength + weapon.getAtk() : strength;
     }
 }

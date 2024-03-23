@@ -1,8 +1,13 @@
 package util;
 
-import java.util.ArrayList;
+import items.armor.Armor;
+import items.weapon.Weapon;
 
-public class FixedArrayList<T> extends ArrayList<T> {
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class FixedArrayList<T> extends ArrayList<T> implements Serializable {
 
     private int capacity;
 
@@ -22,5 +27,27 @@ public class FixedArrayList<T> extends ArrayList<T> {
 
         capacity += amount;
         ensureCapacity(capacity);
+    }
+
+    public List<Armor> filterArmors() {
+
+        List<Armor> armors = new ArrayList<>();
+        for (T item : this) {
+            if (item instanceof Armor) {
+                armors.add((Armor) item);
+            }
+        }
+        return armors;
+    }
+
+    public List<Weapon> filterWeapons() {
+
+        List<Weapon> weapons = new ArrayList<>();
+        for (T item : this) {
+            if (item instanceof Weapon) {
+                weapons.add((Weapon) item);
+            }
+        }
+        return weapons;
     }
 }

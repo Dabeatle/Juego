@@ -1,24 +1,16 @@
 package items.armor;
 
-import items.Item;
+import items.items;
 
-public abstract class Armor extends Item {
+import java.io.Serializable;
 
-    protected int defense;
+public abstract class Armor extends Item implements Serializable {
 
-    public Armor(String name, String description, int price, int defense) {
+    protected int def;
+
+    public Armor(String name, String description, int price, int def) {
 
         super(name, description, price);
-        this.defense = defense;
+        this.def = def;
     }
-
-    public int getDefense() {
-        return defense;
-    }
-
-    public void setDefense(int defense) {
-        this.defense = defense;
-    }
-
-    public abstract void effect();
-}
+}}

@@ -1,23 +1,16 @@
-package items.weapon;
+package items.Weapon;
 
 import items.Item;
 
-public abstract class Weapon extends Item {
+import java.io.Serializable;
 
-    protected int attack;
+public abstract class Weapon extends Item implements Serializable {
+
+    protected int atk;
 
     public Weapon(String name, String description, int price, int atk) {
 
         super(name, description, price);
-        this.attack = attack;
-    }
-
-    public int getAttack() {
-        return attack;
-    }
-
-    public void setAttack(int attack) {
-        this.attack = attack;
+        this.atk = atk;
     }
 }
-
